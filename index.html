@@ -94,6 +94,9 @@
       <div class="hr"></div>
 
       <div class="row">
+        <label class="chip"><input id="stealth" type="checkbox" style="margin-right:8px"> Stealth impostor (players don't see role)</label>
+      </div>
+      <div class="row" style="margin-top:8px">
         <button id="gen" class="btn">Generate Secret Links</button>
         <button id="reset" class="btn ghost">Reset</button>
       </div>
@@ -107,7 +110,7 @@
 
     <div id="playerView" class="card hidden" style="margin-top:16px">
       <div class="center">
-        <div id="rolePill" class="pill">role</div>
+        <div id="rolePill" class="pill hidden">role</div>
         <h2 id="pvGame">Game</h2>
       </div>
       <div class="notice" style="margin:10px 0">
@@ -210,7 +213,10 @@
       const base = location.origin + location.pathname; // same file acts as player view
       const links = names.map((nm,idx)=>{
         const isImp = idx===selectedImp;
-        const payload = { g: game, role: isImp? 'impostor':'crew', q: isImp? qImp : qCommon, n: nm };
+        const stealth = el('stealth').checked;
+        const payload = stealth
+          ? { g: game, q: (isImp ? qImp : qCommon), n: nm } // omit role entirely
+          : { g: game, role: isImp ? 'impostor' : 'crew', q: isImp ? qImp : qCommon, n: nm };
         const url = base + '#p=' + b64u.enc(payload);
         return { idx, nm, url, isImp };
       });
@@ -255,8 +261,13 @@
         el('playerView').classList.remove('hidden');
         el('pvGame').textContent = payload.g || 'Game';
         const pill = el('rolePill');
-        pill.textContent = (payload.role==='impostor'?'IMPOSTOR':'CREW') + (payload.n?` • ${payload.n}`:'');
-        pill.className = 'pill ' + (payload.role==='impostor'?'role-imp':'role-crew');
+        if (payload.role) {
+          pill.classList.remove('hidden');
+          pill.textContent = (payload.role==='impostor'?'IMPOSTOR':'CREW') + (payload.n?` • ${payload.n}`:'');
+          pill.className = 'pill ' + (payload.role==='impostor'?'role-imp':'role-crew');
+        } else {
+          pill.classList.add('hidden');
+        }
         const qBox = el('pvQ');
         qBox.textContent = payload.q || '(no question)';
         el('revealBtn').onclick=()=>{ el('questionBox').classList.remove('hidden'); el('revealBtn').classList.add('hidden'); el('hideBtn').classList.remove('hidden'); };
