@@ -5,20 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Guess the Impostor – Host & Player</title>
   <style>
-    /* ... keep previous styles ... */
+    :root { --bg:#0f1226; --card:#171a36; --muted:#9aa4ff; --text:#e8eaff; --accent:#7cf; --danger:#ff6b6b }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:radial-gradient(1200px 800px at 100% -10%,#1a2050 0%,#0f1226 60%),var(--bg);color:var(--text)}
+    .wrap{max-width:980px;margin:0 auto;padding:28px}
+    h1{font-size:28px;margin:0 0 6px}
+    h2{font-size:20px;margin:20px 0 10px;color:#c9ccff}
+    h3{margin:8px 0;color:#c9ccff}
+    p.small{opacity:.85;font-size:14px;margin:.25rem 0 1rem}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.09);border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .grid{display:grid;gap:14px}
+    .grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    input[type="text"], textarea, input[type="number"], select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#121432;color:var(--text);outline:none}
+    textarea{min-height:92px;resize:vertical}
+    input::placeholder, textarea::placeholder{color:#aab}
+    .btn{appearance:none;border:none;background:linear-gradient(180deg,#5fd 0%,#49c 100%);color:#08131e;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(120,220,255,.35);transition:transform .05s ease}
+    .btn:active{transform:translateY(1px)}
+    .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(124,255,255,.5)}
+    .pill{padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid rgba(255,255,255,.15)}
+    .role-imp{background:#31121a;border-color:#ff9aaa;color:#ffc6d0}
+    .role-crew{background:#10281e;border-color:#96ffc6;color:#c8ffe6}
+    .chip{display:inline-flex;align-items:center;gap:6px;background:#121432;border:1px dashed rgba(255,255,255,.15);color:#bcd;padding:6px 10px;border-radius:999px;font-size:12px}
+    .linkline{display:flex;gap:8px;align-items:center;justify-content:space-between;background:#0e1230;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px}
+    .linkline > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .hidden{display:none}
+    .hr{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);margin:14px 0}
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Guess the Impostor</h1>
-    <p class="small">Host tool to generate per‑player <strong>secret question links</strong>. Players can reuse the same personal link across rounds.</p>
+    <p class="small">Host shares a single link. Players choose their name <em>inside</em> the page and paste a round code to reveal their private question.</p>
 
     <div id="host" class="card">
-      <!-- host settings -->
       <div class="grid two">
         <div>
           <label>Game name</label>
-          <input id="gameName" type="text" placeholder="Friday Night Round" value="Friday Night Round"/>
+          <input id="gameName" type="text" value="Friday Night Round"/>
         </div>
         <div>
           <label>Number of players</label>
@@ -31,11 +57,11 @@
       <div class="grid two">
         <div>
           <label>Common question</label>
-          <textarea id="qCommon"></textarea>
+          <textarea id="qCommon" placeholder="e.g., What's a movie you rewatch?"></textarea>
         </div>
         <div>
           <label>Impostor question</label>
-          <textarea id="qImp"></textarea>
+          <textarea id="qImp" placeholder="e.g., What's a movie you refuse to watch?"></textarea>
         </div>
       </div>
 
@@ -43,7 +69,7 @@
 
       <div class="grid two">
         <div>
-          <label>Player names</label>
+          <label>Player names (optional, used for the join list)</label>
           <div id="names" class="grid three"></div>
         </div>
         <div>
@@ -53,25 +79,22 @@
             <button class="btn" id="randomImp">Randomize Impostor</button>
             <span id="impBadge" class="chip">No impostor picked yet</span>
           </div>
+          <div class="row" style="margin-top:10px">
+            <label class="chip"><input id="stealth" type="checkbox" style="margin-right:8px"> Stealth impostor (players don't see role)</label>
+          </div>
         </div>
       </div>
 
       <div class="hr"></div>
 
       <div class="row">
-        <label class="chip"><input id="stealth" type="checkbox" style="margin-right:8px"> Stealth impostor (players don't see role)</label>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <button id="gen" class="btn">Update Questions</button>
+        <button id="gen" class="btn">Start / Update Round</button>
         <button id="reset" class="btn ghost">Reset</button>
       </div>
 
       <div id="linksWrap" class="hidden">
-      <h2>Share with players</h2>
-      <p class="small">Option A: one link for everyone + a Round Code each round. Option B: per-player stable links (old flow).</p>
-
-      <div class="card" style="margin-bottom:10px">
-        <h3>Option A — Single link</h3>
+        <h2>Single Game Link & Round Code</h2>
+        <p class="small">Share this one link with everyone. Then share the round code each round. Players pick their name inside and paste the code.</p>
         <div class="linkline">
           <span id="singleLink" class="mono"></span>
           <div class="row"><button id="copySingle" class="btn ghost">Copy link</button></div>
@@ -80,11 +103,7 @@
           <span id="roundCode" class="mono"></span>
           <div class="row"><button id="copyRound" class="btn ghost">Copy code</button></div>
         </div>
-        <p class="small">Players open the link, type their name, and paste this round code.</p>
       </div>
-
-      <h3>Option B — Per-player links</h3>
-      <div id="links" class="list"></div>
     </div>
 
     <div id="playerView" class="card hidden" style="margin-top:16px">
@@ -92,19 +111,28 @@
         <div id="rolePill" class="pill hidden">role</div>
         <h2 id="pvGame">Game</h2>
       </div>
-      <div class="notice">Private screen. Tap reveal when ready.</div>
-      <div id="joinWrap" class="hidden" style="margin:10px 0">
-        <label>Your name</label>
-        <input id="joinName" type="text" placeholder="Type your name"/>
-        <label style="margin-top:8px; display:block;">Round Code</label>
-        <div class="row">
-          <input id="roundCodeInput" type="text" placeholder="Paste code from host"/>
-          <button id="loadRound" class="btn">Load</button>
-        </div>
-        <p class="small muted">Use the single shared link + the host's Round Code.</p>
+      <div class="notice" style="margin:10px 0">
+        <strong>Private Screen:</strong> Paste code → pick your name → tap Reveal when ready.
       </div>
+
+      <div id="joinWrap" style="margin:10px 0">
+        <div class="grid two">
+          <div>
+            <label>Round Code</label>
+            <input id="roundCodeInput" type="text" placeholder="Paste code from host"/>
+          </div>
+          <div>
+            <label>Your name</label>
+            <select id="nameSelect"></select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button id="loadRound" class="btn">Load round</button>
+        </div>
+      </div>
+
       <div class="center" style="margin:10px 0 16px">
-        <button id="revealBtn" class="btn">Reveal my question</button>
+        <button id="revealBtn" class="btn hidden">Reveal my question</button>
         <button id="hideBtn" class="btn ghost hidden">Hide</button>
       </div>
       <div id="questionBox" class="hidden">
@@ -115,6 +143,7 @@
   </div>
 
   <script>
+    // --- Base64URL helpers ---
     const b64u = {
       enc: (obj) => {
         const s = JSON.stringify(obj);
@@ -127,160 +156,155 @@
       }
     };
 
-    const el=(id)=>document.getElementById(id);
-    const namesWrap=el('names');
-    const impPick=el('impPick');
-    const playerCount=el('playerCount');
-    const impBadge=el('impBadge');
-    let selectedImp=null;
+    const el = (id)=>document.getElementById(id);
 
-    function rebuildPlayers(){
+    // --- Host: names + impostor pick ---
+    const namesWrap = el('names');
+    const impPick = el('impPick');
+    const playerCount = el('playerCount');
+    const impBadge = el('impBadge');
+    let selectedImp = null;
+
+    function rebuildUI(){
+      // Names
       namesWrap.innerHTML='';
       impPick.innerHTML='';
-      const n=Math.max(2,Math.min(20,parseInt(playerCount.value||6)));
+      const n = Math.max(2, Math.min(20, parseInt(playerCount.value||6)));
       for(let i=0;i<n;i++){
-        const name=document.createElement('input');
+        const name = document.createElement('input');
         name.type='text';
         name.placeholder=`Player ${i+1}`;
         name.dataset.idx=i;
         namesWrap.appendChild(name);
-        const btn=document.createElement('button');
+
+        const btn = document.createElement('button');
         btn.className='btn ghost';
         btn.textContent=`Pick ${i+1}`;
         btn.onclick=()=>pickImp(i);
         impPick.appendChild(btn);
       }
-      if(selectedImp==null||selectedImp>=n){selectedImp=null;impBadge.textContent='No impostor picked yet';impBadge.className='chip';}
+      if(selectedImp==null || selectedImp>=n) { selectedImp=null; setBadge(); }
     }
-    function pickImp(i){selectedImp=i;impBadge.textContent=`Impostor: Player ${i+1}`;impBadge.className='chip role-imp';}
-    el('randomImp').onclick=()=>{const n=Math.max(2,Math.min(20,parseInt(playerCount.value||6)));pickImp(Math.floor(Math.random()*n));};
-    playerCount.addEventListener('input',rebuildPlayers);
-    rebuildPlayers();
 
-    function getNames(){return Array.from(namesWrap.querySelectorAll('input')).map((i,idx)=>i.value.trim()||`Player ${idx+1}`);}
+    function setBadge(){
+      if(selectedImp==null){ impBadge.textContent='No impostor picked yet'; impBadge.className='chip'; }
+      else { impBadge.textContent=`Impostor: Player ${selectedImp+1}`; impBadge.className='chip role-imp'; }
+    }
 
-    el('gen').onclick=()=>{
-      const game=el('gameName').value.trim()||'Round';
-      const qCommon=el('qCommon').value.trim();
-      const qImp=el('qImp').value.trim();
-      const names=getNames();
-      if(!qCommon||!qImp){alert('Please fill both questions.');return;}
-      if(selectedImp==null){alert('Pick an impostor.');return;}
-      const base=location.origin+location.pathname;
-      const links=names.map((nm,idx)=>{
-        const id=nm.replace(/\s+/g,'_')+"_"+idx; // stable id
-        const isImp=idx===selectedImp;
-        const stealth=el('stealth').checked;
-        const payload={ id, g:game, q:(isImp?qImp:qCommon), n:nm };
-        if(!stealth) payload.role=isImp?'impostor':'crew';
-        const url=base+"#pid="+id;
-        localStorage.setItem("impostorPayload_"+id,JSON.stringify(payload));
-        return {nm,url,isImp};
-      });
-      renderLinks(links);
-      const single = location.origin + location.pathname + '#join';
-      const rcObj = {
-        g: game,
-        qc: qCommon,
-        qi: qImp,
-        impName: getNames()[selectedImp] || ('Player ' + (selectedImp + 1)),
-        stealth: el('stealth').checked,
-        t: Date.now()
-      };
-      const rc = b64u.enc(rcObj);
+    function pickImp(i){ selectedImp=i; setBadge(); }
 
-      // Write to UI
-      const singleEl = document.getElementById('singleLink');
-      const roundEl = document.getElementById('roundCode');
-      const copySingle = document.getElementById('copySingle');
-      const copyRound = document.getElementById('copyRound');
-      if (singleEl && roundEl) {
-        singleEl.textContent = single;
-        roundEl.textContent = rc;
-        if (copySingle) copySingle.onclick = async () => {
-          try { await navigator.clipboard.writeText(single); copySingle.textContent='Copied!'; setTimeout(()=>copySingle.textContent='Copy link',1200);} catch(e){ prompt('Copy link:', single); }
-        };
-        if (copyRound) copyRound.onclick = async () => {
-          try { await navigator.clipboard.writeText(rc); copyRound.textContent='Copied!'; setTimeout(()=>copyRound.textContent='Copy code',1200);} catch(e){ prompt('Copy code:', rc); }
-        };
-      }
-      el('linksWrap').classList.remove('hidden');
+    el('randomImp').onclick=()=>{
+      const n = Math.max(2, Math.min(20, parseInt(playerCount.value||6)));
+      pickImp(Math.floor(Math.random()*n));
     };
 
-    function renderLinks(list){
-      const box=el('links');
-      box.innerHTML='';
-      list.forEach(({nm,url,isImp})=>{
-        const line=document.createElement('div');
-        line.className='linkline';
-        line.innerHTML=`<span><strong>${nm}</strong></span><a href="${url}" target="_blank">Open link</a>`;
-        box.appendChild(line);
-      });
+    playerCount.addEventListener('input', rebuildUI);
+    rebuildUI();
+
+    function getNames(){
+      const inputs = Array.from(namesWrap.querySelectorAll('input'));
+      return inputs.map((inp,idx)=> inp.value.trim()||`Player ${idx+1}`);
     }
 
-    el('reset').onclick=()=>{el('qCommon').value='';el('qImp').value='';selectedImp=null;impBadge.textContent='No impostor picked yet';impBadge.className='chip';el('linksWrap').classList.add('hidden');};
+    // --- Host: Generate link + round code ---
+    el('gen').onclick=()=>{
+      const game = el('gameName').value.trim()||'Round';
+      const qCommon = el('qCommon').value.trim();
+      const qImp = el('qImp').value.trim();
+      const names = getNames();
+      if(!qCommon || !qImp){ alert('Please fill both questions.'); return; }
+      if(selectedImp==null){ alert('Pick an impostor.'); return; }
 
+      const stealth = el('stealth').checked;
+      const roundObj = { g: game, qc: qCommon, qi: qImp, names, imp: selectedImp, stealth, t: Date.now() };
+      const code = b64u.enc(roundObj);
+      const single = location.origin + location.pathname + '#join';
+
+      // Show single link & code
+      el('linksWrap').classList.remove('hidden');
+      el('singleLink').textContent = single;
+      el('roundCode').textContent = code;
+      el('copySingle').onclick = async()=>{ try{ await navigator.clipboard.writeText(single); el('copySingle').textContent='Copied!'; setTimeout(()=>el('copySingle').textContent='Copy link',1200);}catch(e){ prompt('Copy link:', single);} };
+      el('copyRound').onclick = async()=>{ try{ await navigator.clipboard.writeText(code); el('copyRound').textContent='Copied!'; setTimeout(()=>el('copyRound').textContent='Copy code',1200);}catch(e){ prompt('Copy code:', code);} };
+    };
+
+    el('reset').onclick=()=>{ el('qCommon').value=''; el('qImp').value=''; selectedImp=null; setBadge(); el('linksWrap').classList.add('hidden'); };
+
+    // --- Player: one-link join flow ---
     function initPlayer(){
-      const hash=new URL(location.href).hash;
-      const norm = s => (s||'').trim().toLowerCase();
-      if (hash.startsWith('#join')) {
-        // One link flow: show join UI and wait for round code
-        el('host').classList.add('hidden');
-        el('playerView').classList.remove('hidden');
-        const joinWrap = document.getElementById('joinWrap');
-        if (joinWrap) joinWrap.classList.remove('hidden');
+      const hash = new URL(location.href).hash;
+      if(!hash.startsWith('#join')) return; // only activate on shared link
 
-        const qBox = el('pvQ');
-        const pill = el('rolePill');
-
-        const applyRound = (roundObj, playerName) => {
-          if (!roundObj || !playerName) return;
-          const youAreImp = norm(playerName) === norm(roundObj.impName);
-          if (roundObj.g) el('pvGame').textContent = roundObj.g;
-          // Stealth: only show role if host didn't turn on stealth
-          if (!roundObj.stealth) {
-            pill.classList.remove('hidden');
-            pill.textContent = (youAreImp ? 'IMPOSTOR' : 'CREW') + (playerName ? ` • ${playerName}` : '');
-            pill.className = 'pill ' + (youAreImp ? 'role-imp' : 'role-crew');
-          } else {
-            pill.classList.add('hidden');
-          }
-          qBox.textContent = youAreImp ? (roundObj.qi || '(no question)') : (roundObj.qc || '(no question)');
-        };
-
-        // Load button handler
-        const loadBtn = document.getElementById('loadRound');
-        loadBtn.onclick = () => {
-          try {
-            const playerName = document.getElementById('joinName').value;
-            const codeText = document.getElementById('roundCodeInput').value.trim();
-            const roundObj = b64u.dec(codeText);
-            applyRound(roundObj, playerName);
-            // Ready to reveal/hide
-            el('revealBtn').onclick = () => { el('questionBox').classList.remove('hidden'); el('revealBtn').classList.add('hidden'); el('hideBtn').classList.remove('hidden'); };
-            el('hideBtn').onclick = () => { el('questionBox').classList.add('hidden'); el('revealBtn').classList.remove('hidden'); el('hideBtn').classList.add('hidden'); };
-          } catch (e) {
-            alert('Invalid Round Code');
-          }
-        };
-
-        return; // stop here; we handled the join path
-      }
-      if(!(hash.startsWith('#pid=') || hash.startsWith('#join'))) return;
-      const id=hash.slice(5);
-      const data=localStorage.getItem("impostorPayload_"+id);
-      if(!data) return;
-      const payload=JSON.parse(data);
       el('host').classList.add('hidden');
       el('playerView').classList.remove('hidden');
-      el('pvGame').textContent=payload.g||'Game';
-      const pill=el('rolePill');
-      if(payload.role){pill.classList.remove('hidden');pill.textContent=(payload.role==='impostor'?'IMPOSTOR':'CREW')+(payload.n?` • ${payload.n}`:'');}
-      else{pill.classList.add('hidden');}
-      const qBox=el('pvQ');
-      qBox.textContent=payload.q||'(no question)';
-      el('revealBtn').onclick=()=>{el('questionBox').classList.remove('hidden');el('revealBtn').classList.add('hidden');el('hideBtn').classList.remove('hidden');};
-      el('hideBtn').onclick=()=>{el('questionBox').classList.add('hidden');el('revealBtn').classList.remove('hidden');el('hideBtn').classList.add('hidden');};
+
+      const nameSel = el('nameSelect');
+      nameSel.innerHTML = '<option value="" disabled selected>Load the round first</option>';
+
+      const pill = el('rolePill');
+      const qBox = el('pvQ');
+      let roundObj = null;
+
+      function applyRoundToUI(){
+        if(!roundObj) return;
+        el('pvGame').textContent = roundObj.g || 'Game';
+        // populate names dropdown
+        nameSel.innerHTML = '';
+        (roundObj.names||[]).forEach((nm,idx)=>{
+          const o=document.createElement('option');
+          o.value=String(idx); o.textContent=nm; nameSel.appendChild(o);
+        });
+        const other=document.createElement('option'); other.value='__other__'; other.textContent='Not in list…'; nameSel.appendChild(other);
+        el('revealBtn').classList.add('hidden');
+        el('hideBtn').classList.add('hidden');
+        el('questionBox').classList.add('hidden');
+        qBox.textContent='';
+      }
+
+      // Load round code
+      el('loadRound').onclick = ()=>{
+        try { roundObj = b64u.dec(el('roundCodeInput').value.trim()); applyRoundToUI(); }
+        catch(e){ alert('Invalid round code'); }
+      };
+
+      // When player is ready, compute their question
+      el('revealBtn').onclick = ()=>{
+        el('questionBox').classList.remove('hidden');
+        el('revealBtn').classList.add('hidden');
+        el('hideBtn').classList.remove('hidden');
+      };
+      el('hideBtn').onclick = ()=>{
+        el('questionBox').classList.add('hidden');
+        el('revealBtn').classList.remove('hidden');
+        el('hideBtn').classList.add('hidden');
+      };
+
+      // When user picks name and loads round, decide question/role
+      el('nameSelect').addEventListener('change', ()=>{
+        if(!roundObj) { alert('Paste and load the round code first.'); return; }
+        const v = el('nameSelect').value;
+        let isImp=false; let displayName='';
+        if(v==='__other__'){
+          const nm = prompt('Enter your name');
+          if(!nm){ return; }
+          displayName = nm.trim();
+          isImp = false; // names outside list are always crew to avoid accidental reveals
+        } else {
+          const idx = parseInt(v,10);
+          displayName = (roundObj.names||[])[idx] || `Player ${idx+1}`;
+          isImp = (idx === roundObj.imp);
+        }
+        if(!roundObj.stealth){
+          pill.classList.remove('hidden');
+          pill.textContent = (isImp? 'IMPOSTOR':'CREW') + (displayName?` • ${displayName}`:'');
+          pill.className = 'pill ' + (isImp? 'role-imp':'role-crew');
+        } else {
+          pill.classList.add('hidden');
+        }
+        el('revealBtn').classList.remove('hidden');
+        const q = isImp ? roundObj.qi : roundObj.qc;
+        el('pvQ').textContent = q || '(no question)';
+      });
     }
     initPlayer();
   </script>
