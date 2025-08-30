@@ -67,10 +67,24 @@
       </div>
 
       <div id="linksWrap" class="hidden">
-        <h2>Player Links (stable)</h2>
-        <p class="small">These links never change. Players can bookmark and reuse the same link each round. Host just updates questions, and each link shows the new secret.</p>
-        <div id="links" class="list"></div>
+      <h2>Share with players</h2>
+      <p class="small">Option A: one link for everyone + a Round Code each round. Option B: per-player stable links (old flow).</p>
+
+      <div class="card" style="margin-bottom:10px">
+        <h3>Option A — Single link</h3>
+        <div class="linkline">
+          <span id="singleLink" class="mono"></span>
+          <div class="row"><button id="copySingle" class="btn ghost">Copy link</button></div>
+        </div>
+        <div class="linkline" style="margin-top:8px">
+          <span id="roundCode" class="mono"></span>
+          <div class="row"><button id="copyRound" class="btn ghost">Copy code</button></div>
+        </div>
+        <p class="small">Players open the link, type their name, and paste this round code.</p>
       </div>
+
+      <h3>Option B — Per-player links</h3>
+      <div id="links" class="list"></div>
     </div>
 
     <div id="playerView" class="card hidden" style="margin-top:16px">
@@ -79,6 +93,16 @@
         <h2 id="pvGame">Game</h2>
       </div>
       <div class="notice">Private screen. Tap reveal when ready.</div>
+      <div id="joinWrap" class="hidden" style="margin:10px 0">
+        <label>Your name</label>
+        <input id="joinName" type="text" placeholder="Type your name"/>
+        <label style="margin-top:8px; display:block;">Round Code</label>
+        <div class="row">
+          <input id="roundCodeInput" type="text" placeholder="Paste code from host"/>
+          <button id="loadRound" class="btn">Load</button>
+        </div>
+        <p class="small muted">Use the single shared link + the host's Round Code.</p>
+      </div>
       <div class="center" style="margin:10px 0 16px">
         <button id="revealBtn" class="btn">Reveal my question</button>
         <button id="hideBtn" class="btn ghost hidden">Hide</button>
@@ -154,6 +178,32 @@
         return {nm,url,isImp};
       });
       renderLinks(links);
+      const single = location.origin + location.pathname + '#join';
+      const rcObj = {
+        g: game,
+        qc: qCommon,
+        qi: qImp,
+        impName: getNames()[selectedImp] || ('Player ' + (selectedImp + 1)),
+        stealth: el('stealth').checked,
+        t: Date.now()
+      };
+      const rc = b64u.enc(rcObj);
+
+      // Write to UI
+      const singleEl = document.getElementById('singleLink');
+      const roundEl = document.getElementById('roundCode');
+      const copySingle = document.getElementById('copySingle');
+      const copyRound = document.getElementById('copyRound');
+      if (singleEl && roundEl) {
+        singleEl.textContent = single;
+        roundEl.textContent = rc;
+        if (copySingle) copySingle.onclick = async () => {
+          try { await navigator.clipboard.writeText(single); copySingle.textContent='Copied!'; setTimeout(()=>copySingle.textContent='Copy link',1200);} catch(e){ prompt('Copy link:', single); }
+        };
+        if (copyRound) copyRound.onclick = async () => {
+          try { await navigator.clipboard.writeText(rc); copyRound.textContent='Copied!'; setTimeout(()=>copyRound.textContent='Copy code',1200);} catch(e){ prompt('Copy code:', rc); }
+        };
+      }
       el('linksWrap').classList.remove('hidden');
     };
 
@@ -172,7 +222,51 @@
 
     function initPlayer(){
       const hash=new URL(location.href).hash;
-      if(!hash.startsWith('#pid='))return;
+      const norm = s => (s||'').trim().toLowerCase();
+      if (hash.startsWith('#join')) {
+        // One link flow: show join UI and wait for round code
+        el('host').classList.add('hidden');
+        el('playerView').classList.remove('hidden');
+        const joinWrap = document.getElementById('joinWrap');
+        if (joinWrap) joinWrap.classList.remove('hidden');
+
+        const qBox = el('pvQ');
+        const pill = el('rolePill');
+
+        const applyRound = (roundObj, playerName) => {
+          if (!roundObj || !playerName) return;
+          const youAreImp = norm(playerName) === norm(roundObj.impName);
+          if (roundObj.g) el('pvGame').textContent = roundObj.g;
+          // Stealth: only show role if host didn't turn on stealth
+          if (!roundObj.stealth) {
+            pill.classList.remove('hidden');
+            pill.textContent = (youAreImp ? 'IMPOSTOR' : 'CREW') + (playerName ? ` • ${playerName}` : '');
+            pill.className = 'pill ' + (youAreImp ? 'role-imp' : 'role-crew');
+          } else {
+            pill.classList.add('hidden');
+          }
+          qBox.textContent = youAreImp ? (roundObj.qi || '(no question)') : (roundObj.qc || '(no question)');
+        };
+
+        // Load button handler
+        const loadBtn = document.getElementById('loadRound');
+        loadBtn.onclick = () => {
+          try {
+            const playerName = document.getElementById('joinName').value;
+            const codeText = document.getElementById('roundCodeInput').value.trim();
+            const roundObj = b64u.dec(codeText);
+            applyRound(roundObj, playerName);
+            // Ready to reveal/hide
+            el('revealBtn').onclick = () => { el('questionBox').classList.remove('hidden'); el('revealBtn').classList.add('hidden'); el('hideBtn').classList.remove('hidden'); };
+            el('hideBtn').onclick = () => { el('questionBox').classList.add('hidden'); el('revealBtn').classList.remove('hidden'); el('hideBtn').classList.add('hidden'); };
+          } catch (e) {
+            alert('Invalid Round Code');
+          }
+        };
+
+        return; // stop here; we handled the join path
+      }
+      if(!(hash.startsWith('#pid=') || hash.startsWith('#join'))) return;
       const id=hash.slice(5);
       const data=localStorage.getItem("impostorPayload_"+id);
       if(!data) return;
